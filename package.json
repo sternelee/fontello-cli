@@ -1,0 +1,25 @@
+{
+  "name": "iconfont-cli",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@types/lodash": "^4.17.5",
+    "@xmldom/xmldom": "^0.8.10",
+    "base64-js": "^1.5.1",
+    "crypto": "^1.0.1",
+    "jszip": "^3.10.1",
+    "knockout": "^3.5.1",
+    "lodash": "^4.17.21",
+    "svg2ttf": "^6.0.3",
+    "svgpath": "^2.6.0",
+    "ttf2eot": "^3.1.0",
+    "ttf2woff": "^3.0.0",
+    "wawoff2": "^2.0.1"
+  }
+}
