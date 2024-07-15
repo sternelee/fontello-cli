@@ -27,12 +27,68 @@ const N = {
   fontname: "fontello",
   fullname: "Fontello Icons",
   files: {
+    html: "fontello.html",
+    svg: "fontello.svg",
     ttf: "fontello.ttf",
     eot: "fontello.eot",
     woff: "fontello.woff",
     woff2: "fontello.woff2",
   },
 };
+
+N.fontsList = new FontsList();
+N.fontSize = ko.observable(16);
+N.hinting = ko.observable(true);
+// N.encoding = ko.observable('pua');
+
+// Font Params
+//
+N.fontName = ko.observable("");
+N.cssPrefixText = ko.observable("icon-");
+N.cssUseSuffix = ko.observable(false);
+// This font params needed only if one wish to create custom font,
+// or play with baseline. Can be tuned via advanced settings
+N.fontUnitsPerEm = ko.observable(1000);
+N.fontAscent = ko.observable(850);
+N.fontFullName = ko.observable("");
+N.fontCopyright = ko.observable("");
+
+N.getConfig = function () {
+  const config = {
+    name: N.fontName().trim(),
+    css_prefix_text: N.cssPrefixText().trim(),
+    css_use_suffix: N.cssUseSuffix(),
+    hinting: N.hinting(),
+    units_per_em: N.fontUnitsPerEm(),
+    ascent: N.fontAscent(),
+  };
+
+  if (!_.isEmpty(N.fontCopyright())) {
+    config.copyright = $.trim(N.fontCopyright());
+  }
+  if (!_.isEmpty(N.fontFullName())) {
+    config.fullname = $.trim(N.fontFullName());
+  }
+
+  config.glyphs = [];
+
+  // add selected glyphs first to keep selection order
+  _.forEach(N.fontsList.selectedGlyphs(), (glyph) => {
+    config.glyphs.push(glyph.serialize());
+  });
+
+  // add custom icons (if not elected yet)
+  _(N.fontsList.fonts)
+    .filter({ fontname: "fontello" })
+    .forEach((font) => {
+      _.forEach(font.glyphs, (glyph) => {
+        if (!glyph.selected()) config.glyphs.push(glyph.serialize());
+      });
+    });
+
+  return config;
+};
+
 
 const splitPathRe =
   /^(\/?|)([\s\S]*?)((?:\.{1,2}|[^\/]+?|)(\.[^.\/]*|))(?:[\/]*)$/;
@@ -133,60 +189,9 @@ function GlyphModel(data, parent) {
 
     return res;
   };
-
-  //
-  // Helpers
-  //
-
-  this.selectOnEnter = function (glyph, event) {
-    if ((event.keyCode || event.which) === 13) {
-      self.toggleSelect(!self.selected());
-    }
-
-    return true;
-  };
-
   this.remove = function () {
     self.font.removeGlyph(self.uid);
   };
-  // code value as character (for code editor)
-  //
-  this.customChar = ko.computed({
-    read() {
-      return utils.fixedFromCharCode(this.code());
-    },
-    write(value) {
-      this.code(utils.fixedCharCodeAt(value));
-    },
-    owner: this,
-  });
-
-  // code value as hex-string (for code editor)
-  //
-  this.customHex = ko.computed({
-    read() {
-      const code = this.code().toString(16).toUpperCase();
-      return "0000".substr(0, Math.max(4 - code.length, 0)) + code;
-    },
-    write(value) {
-      // value must be HEX string - omit invalid chars
-      value = 0 + value.replace(/[^0-9a-fA-F]+/g, "");
-      this.code(parseInt(value, 16));
-    },
-    owner: this,
-  });
-  // code value as hex-string (for code editor)
-  //
-  // Whenever or not glyph should be treaten as "modified"
-  //
-  this.isModified = function () {
-    return (
-      self.selected() ||
-      self.name() !== self.originalName ||
-      self.code() !== self.originalCode
-    );
-  };
-
   // Do selection before attaching remapper, to keep codes
   // on config import
   this.toggleSelect(!!data.selected);
@@ -277,8 +282,8 @@ function FontModel(data, parent) {
     // changes metrics - recalculate ascent/descent to get tha same baseline.
     //
     conf.font.ascent = +(
-      (N.app.fontAscent() * 1000) /
-      N.app.fontUnitsPerEm()
+      (N.fontAscent() * 1000) /
+      N.fontUnitsPerEm()
     ).toFixed(0);
     conf.font.descent = conf.font.ascent - 1000;
 
@@ -300,30 +305,30 @@ function FontModel(data, parent) {
 
     const svgFontTemplate = _.template(
       '<?xml version="1.0" standalone="no"?>\n' +
-        '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n' +
-        '<svg xmlns="http://www.w3.org/2000/svg">\n' +
-        "<defs>\n" +
-        '<font id="_${font.fontname}" horiz-adv-x="${font.ascent - font.descent}" >\n' +
-        "<font-face" +
-        ' font-family="${font.familyname}"' +
-        ' font-weight="400"' +
-        ' font-stretch="normal"' +
-        ' units-per-em="${font.ascent - font.descent}"' +
-        ' ascent="${font.ascent}"' +
-        ' descent="${font.descent}"' +
-        " />\n" +
-        '<missing-glyph horiz-adv-x="${font.ascent - font.descent}" />\n' +
-        "<% glyphs.forEach(function(glyph) { %>" +
-        "<glyph" +
-        ' glyph-name="${glyph.css}"' +
-        ' unicode="&#x${glyph.code.toString(16)};"' +
-        ' d="${glyph.d}"' +
-        ' horiz-adv-x="${glyph.width}"' +
-        " />\n" +
-        "<% }); %>" +
-        "</font>\n" +
-        "</defs>\n" +
-        "</svg>"
+      '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n' +
+      '<svg xmlns="http://www.w3.org/2000/svg">\n' +
+      "<defs>\n" +
+      '<font id="_${font.fontname}" horiz-adv-x="${font.ascent - font.descent}" >\n' +
+      "<font-face" +
+      ' font-family="${font.familyname}"' +
+      ' font-weight="400"' +
+      ' font-stretch="normal"' +
+      ' units-per-em="${font.ascent - font.descent}"' +
+      ' ascent="${font.ascent}"' +
+      ' descent="${font.descent}"' +
+      " />\n" +
+      '<missing-glyph horiz-adv-x="${font.ascent - font.descent}" />\n' +
+      "<% glyphs.forEach(function(glyph) { %>" +
+      "<glyph" +
+      ' glyph-name="${glyph.css}"' +
+      ' unicode="&#x${glyph.code.toString(16)};"' +
+      ' d="${glyph.d}"' +
+      ' horiz-adv-x="${glyph.width}"' +
+      " />\n" +
+      "<% }); %>" +
+      "</font>\n" +
+      "</defs>\n" +
+      "</svg>"
     );
 
     return svgFontTemplate(conf);
@@ -412,66 +417,6 @@ function FontsList() {
   namesTracker.observeFontsList(this);
 }
 
-N.models = {};
-N.app = {};
-
-N.app.searchWord = ko.observable("").extend({ throttle: 100 });
-N.app.searchMode = ko.computed(function () {
-  return N.app.searchWord().length > 0;
-});
-N.app.fontsList = new FontsList({ searchWord: N.app.searchWord });
-N.app.fontSize = ko.observable(16);
-N.app.hinting = ko.observable(true);
-// N.app.encoding = ko.observable('pua');
-
-// Font Params
-//
-N.app.fontName = ko.observable("");
-N.app.cssPrefixText = ko.observable("icon-");
-N.app.cssUseSuffix = ko.observable(false);
-// This font params needed only if one wish to create custom font,
-// or play with baseline. Can be tuned via advanced settings
-N.app.fontUnitsPerEm = ko.observable(1000);
-N.app.fontAscent = ko.observable(850);
-N.app.fontFullName = ko.observable("");
-N.app.fontCopyright = ko.observable("");
-
-N.app.getConfig = function () {
-  const config = {
-    name: N.app.fontName().trim(),
-    css_prefix_text: N.app.cssPrefixText().trim(),
-    css_use_suffix: N.app.cssUseSuffix(),
-    hinting: N.app.hinting(),
-    units_per_em: N.app.fontUnitsPerEm(),
-    ascent: N.app.fontAscent(),
-  };
-
-  if (!_.isEmpty(N.app.fontCopyright())) {
-    config.copyright = $.trim(N.app.fontCopyright());
-  }
-  if (!_.isEmpty(N.app.fontFullName())) {
-    config.fullname = $.trim(N.app.fontFullName());
-  }
-
-  config.glyphs = [];
-
-  // add selected glyphs first to keep selection order
-  _.forEach(N.app.fontsList.selectedGlyphs(), (glyph) => {
-    config.glyphs.push(glyph.serialize());
-  });
-
-  // add custom icons (if not elected yet)
-  _(N.app.fontsList.fonts)
-    .filter({ fontname: "fontello" })
-    .forEach((font) => {
-      _.forEach(font.glyphs, (glyph) => {
-        if (!glyph.selected()) config.glyphs.push(glyph.serialize());
-      });
-    });
-
-  return config;
-};
-
 //
 // Import config
 //
@@ -481,7 +426,7 @@ function import_config(str) {
   try {
     const config = JSON.parse(str);
     const getFont = _.memoize(function (name) {
-      return N.app.fontsList.getFont(name);
+      return N.fontsList.getFont(name);
     });
     const customIcons = getFont("fontello");
     const maxRef = _.maxBy(customIcons.glyphs, function (glyph) {
@@ -492,13 +437,13 @@ function import_config(str) {
       ? 0xe800
       : utils.fixedCharCodeAt(maxRef.charRef) + 1;
 
-    N.app.fontName(config.name || "");
-    N.app.cssPrefixText(String(config.css_prefix_text || "icon-"));
-    N.app.cssUseSuffix(config.css_use_suffix === true);
-    N.app.hinting(config.hinting !== false); // compatibility with old configs
+    N.fontName(config.name || "");
+    N.cssPrefixText(String(config.css_prefix_text || "icon-"));
+    N.cssUseSuffix(config.css_use_suffix === true);
+    N.hinting(config.hinting !== false); // compatibility with old configs
 
-    N.app.fontUnitsPerEm(Number(config.units_per_em) || 1000);
-    N.app.fontAscent(Number(config.ascent) || 850);
+    N.fontUnitsPerEm(Number(config.units_per_em) || 1000);
+    N.fontAscent(Number(config.ascent) || 850);
 
     // Patch broken data to fix original config
     if (config.fullname === "undefined") {
@@ -508,18 +453,18 @@ function import_config(str) {
       delete config.copyright;
     }
 
-    N.app.fontFullName(String(config.fullname || ""));
-    N.app.fontCopyright(String(config.copyright || ""));
+    N.fontFullName(String(config.fullname || ""));
+    N.fontCopyright(String(config.copyright || ""));
 
     // reset selection prior to set glyph data
-    N.app.fontsList.unselectAll();
+    N.fontsList.unselectAll();
 
     // remove custom glyphs
     customIcons.removeGlyph();
 
     // create map to lookup glyphs by id
     const glyphById = {};
-    _.each(N.app.fontsList.fonts, function (font) {
+    _.each(N.fontsList.fonts, function (font) {
       _.each(font.glyphs, function (glyph) {
         glyphById[glyph.uid] = glyph;
       });
@@ -577,11 +522,12 @@ function import_config(str) {
 function import_svg_font(data, file) {
   const xmlDoc = new XMLDOMParser().parseFromString(data, "application/xml");
 
-  const customIcons = N.app.fontsList.getFont("fontello");
+  const customIcons = N.fontsList.getFont("fontello");
   const isExist = _.findIndex(customIcons.glyphs, function (g) {
     return g.md5 === file.md5;
   });
   if (isExist !== -1) return;
+  console.log('Running:', file)
 
   // Allocate reference code, used to show generated font on fontello page
   // That's for internal needs, don't confuse with glyph (model) code
@@ -656,14 +602,13 @@ function import_svg_font(data, file) {
 //
 
 function import_svg_image(data, file) {
-  console.log(file);
-
-  const customIcons = N.app.fontsList.getFont("fontello");
+  const customIcons = N.fontsList.getFont("fontello");
 
   const isExist = _.findIndex(customIcons.glyphs, function (g) {
     return g.md5 === file.md5;
   });
   if (isExist !== -1) return;
+  console.log('Running:', file)
 
   // Allocate reference code, used to show generated font on fontello page
   // That's for internal needs, don't confuse with glyph (model) code
@@ -722,7 +667,7 @@ function import_svg_image(data, file) {
 }
 
 function export_config(dir) {
-  const config = N.app.getConfig();
+  const config = N.getConfig();
   const filePath = path.join(dir, "config.json");
   fs.writeFile(filePath, JSON.stringify(config), "utf8", (err) => {
     if (err) return;
@@ -731,13 +676,14 @@ function export_config(dir) {
 }
 
 async function export_fonts(font_name = "fontello") {
-  const customIcons = N.app.fontsList.getFont(font_name);
+  const customIcons = N.fontsList.getFont(font_name);
   if (!customIcons.glyphs.length) {
     return;
   }
   let ttf;
+  const svgOutput = customIcons.makeSvgFont();
   try {
-    ttf = svg2ttf(customIcons.makeSvgFont(), {
+    ttf = svg2ttf(svgOutput, {
       copyright: "Copyright (C) 2012 by Fontello project",
     }).buffer;
   } catch (err) {
@@ -745,6 +691,8 @@ async function export_fonts(font_name = "fontello") {
     console.log(err);
     return;
   }
+
+  await write(N.files.svg, svgOutput, 'utf8');
 
   // write ttf file
   await write(N.files.ttf, ttf);
@@ -764,10 +712,62 @@ async function export_fonts(font_name = "fontello") {
   let woff2Output = await wawoff2.compress(ttf);
 
   await write(N.files.woff2, woff2Output);
+  export_html();
+}
+
+async function export_html(font_name = "fontello") {
+  const customIcons = N.fontsList.getFont(font_name);
+  if (!customIcons.glyphs.length) {
+    return;
+  }
+  const glyphs = _.sortBy(customIcons.glyphs, ['originalCode']).reverse();
+  const htmlTemplate = _.template(
+    '<!DOCTYPE html>' +
+    '<html lang="en">' +
+    '<head>' +
+    '<meta charset="UTF-8">' +
+    '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+    '<title>Fontello Icons</title>' +
+    '<style>' +
+    '@font-face {' +
+    'font-family: "fontello";' +
+    'src: url("./fontello.eot");' +
+    'src: url("./fontello.eot?#iefix") format("embedded-opentype"),' +
+    'url("./fontello.woff") format("woff"),' +
+    'url("./fontello.ttf") format("truetype"),' +
+    'url("./fontello.svg#fontello") format("svg");' +
+    'font-weight: normal;' +
+    'font-style: normal;' +
+    '}' +
+    '.fontello-icon {' +
+    'font-family: "fontello";' +
+    'display: flex;' +
+    'font-size: 30px;' +
+    'color: #23a455;' +
+    'gap: 10px;' +
+    '}' +
+    '</style>' +
+    '</head>' +
+    '<body>' +
+    '<h2>' +
+    'Fontello Icons Preview' +
+    '</h2>' +
+    '<div class="fontello-icon">' +
+    '<% glyphs.forEach(function(glyph) { %>' +
+    '<span>&#x${glyph.charRef.charCodeAt(0).toString(16)};</span>' +
+    '<% }); %>' +
+    '</div>' +
+    '</body>' +
+    '</html>');
+
+  const htmlString = htmlTemplate({
+    glyphs
+  });
+  await write(N.files.html, htmlString, 'utf8');
 }
 
 function make_svg_font(font_name = "fontello") {
-  const customIcons = N.app.fontsList.getFont(font_name);
+  const customIcons = N.fontsList.getFont(font_name);
 
   if (!customIcons.glyphs.length) {
     return;
@@ -784,8 +784,8 @@ function make_svg_font(font_name = "fontello") {
 
   const styleTemplate = _.template(
     '<style id="ff_${fontId}" type="text/css">\n ${fontface}' +
-      '  .font-${fontId} { font-family: "fml_${fontId}"; }\n' +
-      "</style>\n"
+    '  .font-${fontId} { font-family: "fml_${fontId}"; }\n' +
+    "</style>\n"
   );
 
   const style = styleTemplate({
@@ -801,14 +801,13 @@ const read_svg_files = async (dir) => {
     const fileTotal = files.length;
     for (let i = 0; i < files.length; i++) {
       const filePath = path.join(dir, files[i]);
-      console.log("filePath:", filePath);
       if (path.extname(filePath) === ".svg") {
         fs.readFile(filePath, "utf8", (err, data) => {
           if (err) return;
           const name = path.basename(filePath);
           const hash = crypto.createHash("md5");
           hash.update(data);
-          const file = { name, md5: hash.digest("hex") };
+          const file = { name, md5: hash.digest("hex"), filePath };
           if (data.indexOf("<font") + 1) {
             import_svg_font(data, file);
           } else {
