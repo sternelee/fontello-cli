@@ -3,6 +3,7 @@
 const promisify = require("util").promisify;
 const fs = require("fs");
 const write = promisify(fs.writeFile);
+const read = promisify(fs.readFile);
 const path = require("path");
 const SvgPath = require("svgpath");
 const _ = require("lodash");
@@ -25,12 +26,12 @@ const N = {
   fontname: "fontello",
   fullname: "Fontello Icons",
   files: {
-    html: "fontello.html",
-    svg: "fontello.svg",
-    ttf: "fontello.ttf",
-    eot: "fontello.eot",
-    woff: "fontello.woff",
-    woff2: "fontello.woff2",
+    html: "dist/fontello.html",
+    svg: "dist/fontello.svg",
+    ttf: "dist/fontello.ttf",
+    eot: "dist/fontello.eot",
+    woff: "dist/fontello.woff",
+    woff2: "dist/fontello.woff2",
   },
 };
 
@@ -135,7 +136,7 @@ function GlyphModel(data, parent) {
   // Read-only properties
   //
   this.uid = data.uid || uid();
-  this.originalName = data.css;
+  this.originalName = data.name;
   this.originalCode = data.code;
   this.md5 = data.md5;
 
@@ -174,7 +175,7 @@ function GlyphModel(data, parent) {
   this.serialize = function () {
     const res = {
       uid: self.uid,
-      css: self.name(),
+      name: self.name(),
       code: self.code(),
       md5: self.md5,
       src: self.font.fontname,
@@ -287,7 +288,7 @@ function FontModel(data, parent) {
 
     conf.glyphs = _.map(this.glyphs, function (glyph) {
       return {
-        css: glyph.originalName,
+        name: glyph.originalName,
         code: glyph.charRef.charCodeAt(0),
 
         d: new SvgPath(glyph.svg.path)
@@ -318,7 +319,7 @@ function FontModel(data, parent) {
       '<missing-glyph horiz-adv-x="${font.ascent - font.descent}" />\n' +
       "<% glyphs.forEach(function(glyph) { %>" +
       "<glyph" +
-      ' glyph-name="${glyph.css}"' +
+      ' glyph-name="${glyph.name}"' +
       ' unicode="&#x${glyph.code.toString(16)};"' +
       ' d="${glyph.d}"' +
       ' horiz-adv-x="${glyph.width}"' +
@@ -478,7 +479,7 @@ function import_config(str) {
       if (g.src === "fontello") {
         glyph = customIcons.addGlyph({
           uid: g.uid,
-          css: g.css,
+          name: g.name,
           code: g.code,
           md5: g.md5,
           charRef: allocatedRefCode++,
@@ -501,7 +502,7 @@ function import_config(str) {
 
       glyph.toggleSelect(true);
       glyph.code(g.code || glyph.originalCode);
-      glyph.name(g.css || glyph.originalName);
+      glyph.name(g.name || glyph.originalName);
       // flag this glyph as just imported to prevent overriding code in code_tracker
       glyph._imported = true;
     });
@@ -582,7 +583,7 @@ function import_svg_font(data, file) {
       .toString();
 
     customIcons.addGlyph({
-      css: glyphName,
+      name: glyphName,
       code: glyphCode,
       charRef: allocatedRefCode++,
       svg: {
@@ -653,7 +654,7 @@ function import_svg_image(data, file) {
   );
 
   customIcons.addGlyph({
-    css: glyphName,
+    name: glyphName,
     code: allocatedRefCode,
     charRef: allocatedRefCode++,
     md5: file.md5,
@@ -718,49 +719,18 @@ async function export_html(font_name = "fontello") {
   if (!customIcons.glyphs.length) {
     return;
   }
-  const glyphs = _.sortBy(customIcons.glyphs, ['originalCode']).reverse();
-  const htmlTemplate = _.template(
-    '<!DOCTYPE html>' +
-    '<html lang="en">' +
-    '<head>' +
-    '<meta charset="UTF-8">' +
-    '<meta name="viewport" content="width=device-width, initial-scale=1">' +
-    '<title>Fontello Icons</title>' +
-    '<style>' +
-    '@font-face {' +
-    'font-family: "fontello";' +
-    'src: url("./fontello.eot");' +
-    'src: url("./fontello.eot?#iefix") format("embedded-opentype"),' +
-    'url("./fontello.woff") format("woff"),' +
-    'url("./fontello.ttf") format("truetype"),' +
-    'url("./fontello.svg#fontello") format("svg");' +
-    'font-weight: normal;' +
-    'font-style: normal;' +
-    '}' +
-    '.fontello-icon {' +
-    'font-family: "fontello";' +
-    'display: flex;' +
-    'font-size: 30px;' +
-    'color: #23a455;' +
-    'gap: 10px;' +
-    '}' +
-    '</style>' +
-    '</head>' +
-    '<body>' +
-    '<h2>' +
-    'Fontello Icons Preview' +
-    '</h2>' +
-    '<div class="fontello-icon">' +
-    '<% glyphs.forEach(function(glyph) { %>' +
-    '<span>&#x${glyph.charRef.charCodeAt(0).toString(16)};</span>' +
-    '<% }); %>' +
-    '</div>' +
-    '</body>' +
-    '</html>');
+  const templateTtml = await read('./template.html', 'utf8');
+  const htmlTemplate = _.template(templateTtml);
+
+  const glyphs = [];
+  _.forEach(customIcons.glyphs, (glyph) => {
+    glyphs.push(glyph.serialize());
+  });
 
   const htmlString = htmlTemplate({
-    glyphs
+    glyphs: _.sortBy(glyphs, ['code']).reverse()
   });
+
   await write(N.files.html, htmlString, 'utf8');
 }
 
@@ -828,7 +798,7 @@ const read_config_json = async (dir) => {
   fs.readFile(filePath, "utf8", (err, data) => {
     if (err) {
       read_svg_files(dir);
-      rerurn;
+      return;
     }
     if (data) {
       import_config(data);
@@ -839,4 +809,4 @@ const read_config_json = async (dir) => {
   });
 };
 
-read_config_json("./src/svg");
+read_config_json("./svg");
