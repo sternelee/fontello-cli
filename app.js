@@ -670,7 +670,7 @@ function export_config(dir) {
   const filePath = path.join(dir, "config.json");
   fs.writeFile(filePath, JSON.stringify(config), "utf8", (err) => {
     if (err) return;
-    console.log("Export font config.json");
+    // console.log("Export font config.json");
   });
 }
 
@@ -719,7 +719,7 @@ async function export_html(font_name = "fontello") {
   if (!customIcons.glyphs.length) {
     return;
   }
-  const templateTtml = await read('./template.html', 'utf8');
+  const templateTtml = await read('./template_en.html', 'utf8');
   const htmlTemplate = _.template(templateTtml);
 
   const glyphs = [];

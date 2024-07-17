@@ -539,19 +539,13 @@ https://prismjs.com/download.html#themes=prism&languages=markup+css+clike+javasc
     <div class="tab-container">
       <div class="content unicode" style="display: block">
         <ul class="icon_lists dib-box">
-          
+          <% glyphs.forEach(function(glyph) { %>
             <li class="dib">
-              <span class="icon fontello">&#xe801;</span>
-              <div class="name">icon_web</div>
-              <div class="code-name">&amp;#xe801;</div>
+              <span class="icon fontello">&#x${glyph.code.toString(16)};</span>
+              <div class="name">${glyph.name}</div>
+              <div class="code-name">&amp;#x${glyph.code.toString(16)};</div>
             </li>
-            
-            <li class="dib">
-              <span class="icon fontello">&#xe800;</span>
-              <div class="name">verified-icon</div>
-              <div class="code-name">&amp;#xe800;</div>
-            </li>
-            
+            <% }); %>
         </ul>
         <div class="article markdown">
           <p>Unicode is the most primitive application method of fonts on the web page. Its characteristics are:</p>
