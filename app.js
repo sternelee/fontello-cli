@@ -128,7 +128,6 @@ function GlyphModel(data, parent) {
   this.uid = data.uid || uid();
   this.originalName = data.name;
   this.originalCode = data.code;
-  this.md5 = data.md5;
 
   //
   // Helper properties
@@ -155,7 +154,6 @@ function GlyphModel(data, parent) {
       uid: self.uid,
       name: self.name,
       code: self.code,
-      md5: self.md5,
       src: self.font.fontname,
     };
 
@@ -428,7 +426,6 @@ function import_config(str) {
           uid: g.uid,
           name: g.name,
           code: g.code,
-          md5: g.md5,
           charRef: allocatedRefCode++,
           svg: {
             path: g.svg.path,
@@ -468,7 +465,7 @@ function import_svg_font(data, file) {
 
   const customIcons = N.fontsList.getFont("fontello");
   const isExist = _.findIndex(customIcons.glyphs, function (g) {
-    return g.md5 === file.md5;
+    return g.uid === file.uid;
   });
   if (isExist !== -1) return;
   console.log('Running:', file)
@@ -549,7 +546,7 @@ function import_svg_image(data, file) {
   const customIcons = N.fontsList.getFont("fontello");
 
   const isExist = _.findIndex(customIcons.glyphs, function (g) {
-    return g.md5 === file.md5;
+    return g.uid === file.uid;
   });
   if (isExist !== -1) return;
   console.log('Running:', file)
@@ -602,7 +599,7 @@ function import_svg_image(data, file) {
     name: glyphName,
     code: allocatedRefCode,
     charRef: allocatedRefCode++,
-    md5: file.md5,
+    uid: file.uid,
     svg: {
       path: d,
       width,
@@ -720,7 +717,7 @@ const read_svg_files = async (dir) => {
           const name = path.basename(filePath);
           const hash = crypto.createHash("md5");
           hash.update(data);
-          const file = { name, md5: hash.digest("hex"), filePath };
+          const file = { name, uid: hash.digest("hex"), filePath };
           if (data.indexOf("<font") + 1) {
             import_svg_font(data, file);
           } else {
