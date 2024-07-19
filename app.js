@@ -12,12 +12,9 @@ const ttf2eot = require("ttf2eot");
 const ttf2woff = require("ttf2woff");
 const wawoff2 = require("wawoff2");
 const b64 = require("base64-js");
-const ko = require("knockout");
 const crypto = require("crypto");
 const XMLDOMParser = require("@xmldom/xmldom").DOMParser;
 
-const codesTracker = require("./codes_tracker");
-const namesTracker = require("./names_tracker");
 const svg_image_flatten = require("./svg_image_flatten");
 const utils = require("./utils");
 const embedded_fonts = require("./client_config");
@@ -25,6 +22,18 @@ const embedded_fonts = require("./client_config");
 const N = {
   fontname: "fontello",
   fullname: "Fontello Icons",
+  fontName: "",
+  fontFullName: "",
+  cssPrefixText: "icon-",
+  cssUseSuffix: false,
+  // This font params needed only if one wish to create custom font,
+  // or play with baseline. Can be tuned via advanced settings
+  fontUnitsPerEm: 1000,
+  fontAscent: 850,
+  fontCopyright: "",
+
+  fontSize: 16,
+  encoding: 'pua',
   files: {
     html: "dist/fontello.html",
     svg: "dist/fontello.svg",
@@ -36,52 +45,33 @@ const N = {
 };
 
 N.fontsList = new FontsList();
-N.fontSize = ko.observable(16);
-N.hinting = ko.observable(true);
-// N.encoding = ko.observable('pua');
 
 // Font Params
 //
-N.fontName = ko.observable("");
-N.cssPrefixText = ko.observable("icon-");
-N.cssUseSuffix = ko.observable(false);
-// This font params needed only if one wish to create custom font,
-// or play with baseline. Can be tuned via advanced settings
-N.fontUnitsPerEm = ko.observable(1000);
-N.fontAscent = ko.observable(850);
-N.fontFullName = ko.observable("");
-N.fontCopyright = ko.observable("");
-
 N.getConfig = function () {
   const config = {
-    name: N.fontName().trim(),
-    css_prefix_text: N.cssPrefixText().trim(),
-    css_use_suffix: N.cssUseSuffix(),
-    hinting: N.hinting(),
-    units_per_em: N.fontUnitsPerEm(),
-    ascent: N.fontAscent(),
+    name: N.fontName.trim(),
+    css_prefix_text: N.cssPrefixText.trim(),
+    css_use_suffix: N.cssUseSuffix,
+    units_per_em: N.fontUnitsPerEm,
+    ascent: N.fontAscent,
   };
 
-  if (!_.isEmpty(N.fontCopyright())) {
-    config.copyright = $.trim(N.fontCopyright());
+  if (!_.isEmpty(N.fontCopyright)) {
+    config.copyright = $.trim(N.fontCopyright);
   }
-  if (!_.isEmpty(N.fontFullName())) {
-    config.fullname = $.trim(N.fontFullName());
+  if (!_.isEmpty(N.fontFullName)) {
+    config.fullname = $.trim(N.fontFullName);
   }
 
   config.glyphs = [];
-
-  // add selected glyphs first to keep selection order
-  _.forEach(N.fontsList.selectedGlyphs(), (glyph) => {
-    config.glyphs.push(glyph.serialize());
-  });
 
   // add custom icons (if not elected yet)
   _(N.fontsList.fonts)
     .filter({ fontname: "fontello" })
     .forEach((font) => {
       _.forEach(font.glyphs, (glyph) => {
-        if (!glyph.selected()) config.glyphs.push(glyph.serialize());
+        config.glyphs.push(glyph.serialize());
       });
     });
 
@@ -151,38 +141,25 @@ function GlyphModel(data, parent) {
   //
   // Actual properties state
   //
-  // actual `selected` value will be set after codes/names trackers init
-  this.selected = ko.observable(false);
-  this.name = ko.observable(this.originalName);
-  this.code = ko.observable(this.originalCode);
+  this.name = this.originalName;
+  this.code = this.originalCode;
 
   this.svg = data.svg;
   // Change glyph selection
   //
-  this.toggleSelect = function (value) {
-    self.selected(value);
-
-    if (value) {
-      self.font.fontsList.selectedGlyphs.push(self);
-    } else {
-      self.font.fontsList.selectedGlyphs.remove(self);
-    }
-  };
-
   // Serialization. Make sure to update this method to have
   // desired fields sent to the server (by font builder).
   //
   this.serialize = function () {
     const res = {
       uid: self.uid,
-      name: self.name(),
-      code: self.code(),
+      name: self.name,
+      code: self.code,
       md5: self.md5,
       src: self.font.fontname,
     };
 
     if (self.font.fontname === "fontello") {
-      res.selected = self.selected();
       res.svg = self.svg;
     }
 
@@ -191,15 +168,9 @@ function GlyphModel(data, parent) {
   this.remove = function () {
     self.font.removeGlyph(self.uid);
   };
-  // Do selection before attaching remapper, to keep codes
-  // on config import
-  this.toggleSelect(!!data.selected);
-
   // FIXME: do better cleanup on glyph remove
   // Register glyph in the names/codes swap-remap handlers.
   //
-  codesTracker.observeGlyph(this);
-  namesTracker.observeGlyph(this);
 }
 
 function FontModel(data, parent) {
@@ -218,7 +189,7 @@ function FontModel(data, parent) {
   // View state properties
   //
 
-  this.collapsed = ko.observable(false);
+  this.collapsed = false;
 
   // Map for fast lookup
   // { id: glyph }
@@ -247,8 +218,6 @@ function FontModel(data, parent) {
       });
       return;
     }
-
-    self.glyphMap[uid].toggleSelect(false);
 
     parent.untrack(this.glyphMap[uid]);
 
@@ -281,8 +250,8 @@ function FontModel(data, parent) {
     // changes metrics - recalculate ascent/descent to get tha same baseline.
     //
     conf.font.ascent = +(
-      (N.fontAscent() * 1000) /
-      N.fontUnitsPerEm()
+      (N.fontAscent * 1000) /
+      N.fontUnitsPerEm
     ).toFixed(0);
     conf.font.descent = conf.font.ascent - 1000;
 
@@ -354,10 +323,7 @@ function FontsList() {
   // { id: glyph }
   this.glyphMap = {};
 
-  // Array of selected glyphs from all fonts
   //
-  this.selectedGlyphs = ko.observableArray();
-
   this.track = function (glyph) {
     this.glyphMap[glyph.uid] = glyph;
   };
@@ -388,16 +354,6 @@ function FontsList() {
     })
   );
 
-  this.unselectAll = function () {
-    this.selectedGlyphs
-      .peek()
-      .slice()
-      .forEach(function (glyph) {
-        glyph.selected(false);
-      });
-    this.selectedGlyphs.removeAll();
-  };
-
   // Search font by name
   //
   this.getFont = function (name) {
@@ -409,11 +365,6 @@ function FontsList() {
   this.getGlyph = function (uid) {
     return this.glyphMap[uid];
   };
-
-  // Register font list in the names/codes swap-remap handlers.
-  //
-  codesTracker.observeFontsList(this);
-  namesTracker.observeFontsList(this);
 }
 
 //
@@ -436,13 +387,12 @@ function import_config(str) {
       ? 0xe800
       : utils.fixedCharCodeAt(maxRef.charRef) + 1;
 
-    N.fontName(config.name || "");
-    N.cssPrefixText(String(config.css_prefix_text || "icon-"));
-    N.cssUseSuffix(config.css_use_suffix === true);
-    N.hinting(config.hinting !== false); // compatibility with old configs
+    N.fontName = (config.name || "");
+    N.cssPrefixText = (String(config.css_prefix_text || "icon-"));
+    N.cssUseSuffix = (config.css_use_suffix === true);
 
-    N.fontUnitsPerEm(Number(config.units_per_em) || 1000);
-    N.fontAscent(Number(config.ascent) || 850);
+    N.fontUnitsPerEm = (Number(config.units_per_em) || 1000);
+    N.fontAscent = (Number(config.ascent) || 850);
 
     // Patch broken data to fix original config
     if (config.fullname === "undefined") {
@@ -452,11 +402,8 @@ function import_config(str) {
       delete config.copyright;
     }
 
-    N.fontFullName(String(config.fullname || ""));
-    N.fontCopyright(String(config.copyright || ""));
-
-    // reset selection prior to set glyph data
-    N.fontsList.unselectAll();
+    N.fontFullName = (String(config.fullname || ""));
+    N.fontCopyright = (String(config.copyright || ""));
 
     // remove custom glyphs
     customIcons.removeGlyph();
@@ -483,7 +430,6 @@ function import_config(str) {
           code: g.code,
           md5: g.md5,
           charRef: allocatedRefCode++,
-          selected: g.selected,
           svg: {
             path: g.svg.path,
             width: g.svg.width,
@@ -500,7 +446,6 @@ function import_config(str) {
         return;
       }
 
-      glyph.toggleSelect(true);
       glyph.code(g.code || glyph.originalCode);
       glyph.name(g.name || glyph.originalName);
       // flag this glyph as just imported to prevent overriding code in code_tracker
