@@ -1,8 +1,7 @@
-<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>IconFont Demo</title>
+  <title>IconFont Preview</title>
   <link rel="stylesheet" href="https://g.alicdn.com/thx/cube/1.3.2/cube.min.css" />
   <style>
     @font-face {
@@ -19,6 +18,12 @@
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
     }
+
+    <% glyphs.forEach(function(glyph) { %>
+    .${cssPrefix}${glyph.name}:before {
+      content: "\${glyph.code.toString(16)}";
+    }
+    <% }); %>
 
     .nav-tabs {
       position: relative;
@@ -526,6 +531,7 @@ https://prismjs.com/download.html#themes=prism&languages=markup+css+clike+javasc
       cursor: help;
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
 </head>
 
@@ -534,6 +540,7 @@ https://prismjs.com/download.html#themes=prism&languages=markup+css+clike+javasc
     <div class="nav-tabs">
       <ul id="tabs" class="dib-box">
         <li class="dib active"><span>Unicode</span></li>
+        <li class="dib"><span>Font class</span></li>
       </ul>
     </div>
     <div class="tab-container">
@@ -545,7 +552,7 @@ https://prismjs.com/download.html#themes=prism&languages=markup+css+clike+javasc
               <div class="name">${glyph.name}</div>
               <div class="code-name">&amp;#x${glyph.code.toString(16)};</div>
             </li>
-            <% }); %>
+          <% }); %>
         </ul>
         <div class="article markdown">
           <p>Unicode is the most primitive application method of fonts on the web page. Its characteristics are:</p>
@@ -578,15 +585,60 @@ https://prismjs.com/download.html#themes=prism&languages=markup+css+clike+javasc
             <code class="language-html">&lt;span class="fontello"&gt;&amp;#xe801;&lt;/span&gt;
             </code>
           </pre>
-          <blockquote>
-            <p>
-                Support pseudo-element just like <b>content: \e801;</b>
-            </p>
-          </blockquote>
         </div>
       </div>
+      <div class="content font-class">
+        <ul class="icon_lists dib-box">
+          <% glyphs.forEach(function(glyph) { %>
+            <li class="dib">
+              <span class="icon fontello ${cssPrefix}${glyph.name}"></span>
+              <div class="name">${glyph.name}</div>
+              <div class="code-name">.${cssPrefix}${glyph.name}</div>
+            </li>
+          <% }); %>
+        </ul>
+        <div class="article markdown">
+        <h2 id="font-class-">font-class usage</h2>
+        <hr>
+        <p>Font-class is a variant of Unicode usage. It mainly solves the problems of unintuitive Unicode writing and unclear semantics.</p>
+        <p>Compared with Unicode usage, it has the following characteristics:</p>
+        <ul>
+          <li>Compared with Unicode, the semantics are clear and writing is more intuitive. It's easy to tell what this icon is.</li>
+          <li>Because class is used to define the icon, when you want to replace the icon, you only need to modify the Unicode reference in the class.</li>
+        </ul>
+        <p>The usage steps are as follows:</p>
+        <h3>Step 1: Introduce the fontclass code generated below the project:</h3>
+        <pre><code class="language-css">
+  <% glyphs.forEach(function(glyph) { %>
+  .${cssPrefix}${glyph.name}:before {
+    content: "\${glyph.code.toString(16)}";
+  }
+  <% }); %>
+        </code></pre>
+        <h3>Step 2: Select the corresponding icon and get the class name, and apply it to the page:</h3>
+        <pre><code class="language-html">&lt;span class="fontello icon-xxx"&gt;&lt;/span&gt;</code></pre>
+      <div>
     </div>
   </div>
+  <script>
+  $(document).ready(function () {
+      $('.tab-container .content:first').show()
+
+      $('#tabs li').click(function (e) {
+        var tabContent = $('.tab-container .content')
+        var index = $(this).index()
+
+        if ($(this).hasClass('active')) {
+          return
+        } else {
+          $('#tabs li').removeClass('active')
+          $(this).addClass('active')
+
+          tabContent.hide().eq(index).fadeIn()
+        }
+      })
+    })
+  </script>
 </body>
 
 </html>

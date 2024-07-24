@@ -26,6 +26,7 @@ const N = {
   // or play with baseline. Can be tuned via advanced settings
   fontUnitsPerEm: 1000,
   fontAscent: 850,
+  cssPrefix: "icon-",
 
   fontSize: 16,
   encoding: "pua",
@@ -484,7 +485,7 @@ function export_config(dir) {
   });
 }
 
-async function export_fonts(font_name = N.fontname) {
+async function export_fonts() {
   let ttf;
   const svgOutput = N.fontModel.makeSvgFont();
   try {
@@ -520,7 +521,7 @@ async function export_fonts(font_name = N.fontname) {
   export_html();
 }
 
-async function export_html(font_name = N.fontname) {
+async function export_html() {
   const templateTtml = await read("./template_en.html", "utf8");
   const htmlTemplate = _.template(templateTtml);
 
@@ -531,12 +532,13 @@ async function export_html(font_name = N.fontname) {
 
   const htmlString = htmlTemplate({
     glyphs: _.sortBy(glyphs, ["code"]).reverse(),
+    cssPrefix: N.cssPrefix,
   });
 
   await write(N.files.html, htmlString, "utf8");
 }
 
-function make_svg_font(font_name = N.fontname) {
+function make_svg_font() {
   let ff;
 
   try {
