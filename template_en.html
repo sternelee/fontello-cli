@@ -3,32 +3,11 @@
   <meta charset="utf-8" />
   <title>IconFont Preview</title>
   <link rel="stylesheet" href="https://g.alicdn.com/thx/cube/1.3.2/cube.min.css" />
+  <link rel="stylesheet" href="${fontname}.css" />
   <style>
-    @font-face {
-      font-family: "fontello";
-      src: url('fontello.woff2') format('woff2'),
-        url('fontello.woff') format('woff'),
-        url('fontello.ttf') format('truetype');
-    }
-
-    .fontello {
-      font-family: "fontello" !important;
-      font-size: 16px;
-      font-style: normal;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-    }
-
-    <% glyphs.forEach(function(glyph) { %>
-    .${cssPrefix}${glyph.name}:before {
-      content: "\${glyph.code.toString(16)}";
-    }
-    <% }); %>
-
     .nav-tabs {
       position: relative;
     }
-
     .nav-tabs .nav-more {
       position: absolute;
       right: 0;
@@ -37,11 +16,9 @@
       line-height: 42px;
       color: #666;
     }
-
     #tabs {
       border-bottom: 1px solid #eee;
     }
-
     #tabs li {
       cursor: pointer;
       width: 100px;
@@ -55,17 +32,13 @@
       margin-bottom: -1px;
       color: #666;
     }
-
-
     #tabs .active {
       border-bottom-color: #f00;
       color: #222;
     }
-
     .tab-container .content {
       display: none;
     }
-
     .main {
       padding: 30px 100px;
       width: 960px;
@@ -82,7 +55,6 @@
       overflow: hidden;
       *zoom: 1;
     }
-
     .main .logo a {
       font-size: 160px;
       color: #333;
@@ -548,7 +520,7 @@ https://prismjs.com/download.html#themes=prism&languages=markup+css+clike+javasc
         <ul class="icon_lists dib-box">
           <% glyphs.forEach(function(glyph) { %>
             <li class="dib">
-              <span class="icon fontello">&#x${glyph.code.toString(16)};</span>
+              <span class="icon ${fontname}">&#x${glyph.code.toString(16)};</span>
               <div class="name">${glyph.name}</div>
               <div class="code-name">&amp;#x${glyph.code.toString(16)};</div>
             </li>
@@ -565,15 +537,15 @@ https://prismjs.com/download.html#themes=prism&languages=markup+css+clike+javasc
             Step 1: Copy the generated <code>@font-face</code> files below the project
           </h3>
           <pre><code class="language-css">@font-face {
-              font-family: 'fontello';
-              src: url('fontello.woff2') format('woff2'),
-              url('fontello.woff') format('woff'),
-              url('fontello.ttf') format('truetype');
+              font-family: '${fontname}';
+              src: url('${fontname}.woff2') format('woff2'),
+              url('${fontname}.woff') format('woff'),
+              url('${fontname}.ttf') format('truetype');
               }
             </code></pre>
-          <h3>Step 2: Define styles using fontello</h3>
-          <pre><code class="language-css">.fontello {
-              font-family: "fontello" !important;
+          <h3>Step 2: Define styles using ${fontname}</h3>
+          <pre><code class="language-css">.${fontname} {
+              font-family: "${fontname}" !important;
               font-size: 16px;
               font-style: normal;
               -webkit-font-smoothing: antialiased;
@@ -582,7 +554,7 @@ https://prismjs.com/download.html#themes=prism&languages=markup+css+clike+javasc
             </code></pre>
           <h3>Step 3: Select the corresponding icon and obtain the font encoding, and apply it to the page</h3>
           <pre>
-            <code class="language-html">&lt;span class="fontello"&gt;&amp;#xe801;&lt;/span&gt;
+            <code class="language-html">&lt;span class="${fontname}"&gt;&amp;#xe801;&lt;/span&gt;
             </code>
           </pre>
         </div>
@@ -591,14 +563,14 @@ https://prismjs.com/download.html#themes=prism&languages=markup+css+clike+javasc
         <ul class="icon_lists dib-box">
           <% glyphs.forEach(function(glyph) { %>
             <li class="dib">
-              <span class="icon fontello ${cssPrefix}${glyph.name}"></span>
+              <span class="icon ${cssPrefix}${glyph.name}"></span>
               <div class="name">${glyph.name}</div>
               <div class="code-name">.${cssPrefix}${glyph.name}</div>
             </li>
           <% }); %>
         </ul>
         <div class="article markdown">
-        <h2 id="font-class-">font-class usage</h2>
+        <h2>font-class usage</h2>
         <hr>
         <p>Font-class is a variant of Unicode usage. It mainly solves the problems of unintuitive Unicode writing and unclear semantics.</p>
         <p>Compared with Unicode usage, it has the following characteristics:</p>
@@ -608,15 +580,9 @@ https://prismjs.com/download.html#themes=prism&languages=markup+css+clike+javasc
         </ul>
         <p>The usage steps are as follows:</p>
         <h3>Step 1: Introduce the fontclass code generated below the project:</h3>
-        <pre><code class="language-css">
-  <% glyphs.forEach(function(glyph) { %>
-  .${cssPrefix}${glyph.name}:before {
-    content: "\${glyph.code.toString(16)}";
-  }
-  <% }); %>
-        </code></pre>
+        <pre><code class="language-html">&lt;link rel="stylesheet" href="./${fontname}.css"&gt;</code></pre>
         <h3>Step 2: Select the corresponding icon and get the class name, and apply it to the page:</h3>
-        <pre><code class="language-html">&lt;span class="fontello icon-xxx"&gt;&lt;/span&gt;</code></pre>
+        <pre><code class="language-html">&lt;span class="${fontname}-xxx"&gt;&lt;/span&gt;</code></pre>
       <div>
     </div>
   </div>

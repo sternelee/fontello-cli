@@ -18,25 +18,28 @@ const XMLDOMParser = require("@xmldom/xmldom").DOMParser;
 const svg_image_flatten = require("./svg_image_flatten");
 const utils = require("./utils");
 
+const fontname = "iconfont";
+
 const N = {
-  fontname: "fontello",
+  fontname,
   fullname: "Fontello Icons",
   fontName: "",
   // This font params needed only if one wish to create custom font,
   // or play with baseline. Can be tuned via advanced settings
   fontUnitsPerEm: 1000,
   fontAscent: 850,
-  cssPrefix: "icon-",
+  cssPrefix: `${fontname}-`,
 
   fontSize: 16,
   encoding: "pua",
   files: {
-    html: "dist/fontello.html",
-    svg: "dist/fontello.svg",
-    ttf: "dist/fontello.ttf",
-    eot: "dist/fontello.eot",
-    woff: "dist/fontello.woff",
-    woff2: "dist/fontello.woff2",
+    html: `dist/${fontname}.html`,
+    css: `dist/${fontname}.css`,
+    svg: `dist/${fontname}.svg`,
+    ttf: `dist/${fontname}.ttf`,
+    eot: `dist/${fontname}.eot`,
+    woff: `dist/${fontname}.woff`,
+    woff2: `dist/${fontname}.woff2`,
   }
 };
 
@@ -336,7 +339,7 @@ function import_svg_font(data, file) {
   }
   console.log("Running:", file);
 
-  // Allocate reference code, used to show generated font on fontello page
+  // Allocate reference code, used to show generated font on iconfont page
   // That's for internal needs, don't confuse with glyph (model) code
   const maxRef = _.maxBy(N.fontModel.glyphs, function (glyph) {
     return utils.fixedCharCodeAt(glyph.charRef);
@@ -419,7 +422,7 @@ function import_svg_image(data, file) {
   }
   console.log("Running:", file);
 
-  // Allocate reference code, used to show generated font on fontello page
+  // Allocate reference code, used to show generated font on iconfont page
   // That's for internal needs, don't confuse with glyph (model) code
   const maxRef = _.maxBy(N.fontModel.glyphs, function (glyph) {
     return utils.fixedCharCodeAt(glyph.charRef);
@@ -532,10 +535,36 @@ async function export_html() {
 
   const htmlString = htmlTemplate({
     glyphs: _.sortBy(glyphs, ["code"]).reverse(),
+    fontname,
     cssPrefix: N.cssPrefix,
   });
+  const cssTemplate = _.template("@font-face {" +
+    "font-family: '${fontname}';" +
+    "src: url('${fontname}.woff2') format('woff2')," +
+    "url('${fontname}.woff') format('woff')," +
+    "url('${fontname}.ttf') format('truetype');" +
+    "}" +
+    ".${fontname}," +
+    "[class^='${fontname}-'], [class*=' ${fontname}-'] {" +
+    "font-family: '${fontname}' !important;" +
+    "font-size: 16px;" +
+    "font-style: normal;" +
+    "-webkit-font-smoothing: antialiased;" +
+    "-moz-osx-font-smoothing: grayscale;" +
+    "}" +
+    "<% glyphs.forEach(function(glyph) { %>" +
+    ".${cssPrefix}${glyph.name}:before {" +
+    "content: '\\${glyph.code.toString(16)}';" +
+    "}" +
+    "<% }); %>");
+  const cssString = cssTemplate({
+    glyphs: _.sortBy(glyphs, ["code"]).reverse(),
+    fontname,
+    cssPrefix: N.cssPrefix,
+  })
 
   await write(N.files.html, htmlString, "utf8");
+  await write(N.files.css, cssString, "utf8");
 }
 
 function make_svg_font() {
